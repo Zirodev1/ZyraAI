@@ -1,2 +1,8 @@
-Z:/ZyraAI/build/CMakeFiles/edit_cache.dir
-Z:/ZyraAI/build/CMakeFiles/rebuild_cache.dir
+/media/ziro/ZiroHCKR/ZyraAI/build/CMakeFiles/ZyraAI.dir
+/media/ziro/ZiroHCKR/ZyraAI/build/CMakeFiles/ZyraAI_lib.dir
+/media/ziro/ZiroHCKR/ZyraAI/build/CMakeFiles/data_tests.dir
+/media/ziro/ZiroHCKR/ZyraAI/build/CMakeFiles/model_tests.dir
+/media/ziro/ZiroHCKR/ZyraAI/build/CMakeFiles/speech_test.dir
+/media/ziro/ZiroHCKR/ZyraAI/build/CMakeFiles/test.dir
+/media/ziro/ZiroHCKR/ZyraAI/build/CMakeFiles/edit_cache.dir
+/media/ziro/ZiroHCKR/ZyraAI/build/CMakeFiles/rebuild_cache.dir
