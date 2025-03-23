@@ -15,10 +15,9 @@ namespace zyraai{
     }
 
     std::string SpeechToText::convertSpeechToText(const std::string& audioFilePath) {
-        // Placeholder for actual speech to text logic
         std::cout << "Converting speech to text from " << audioFilePath << std::endl;
         auto features = AudioProcessing::extractMFCC(audioFilePath);
-        return model.pridict(features);
+        return model.predict(features);
     }
 
     void SpeechToText::saveTextToFile(const std::string& text, const std::string& outputFilePath) {

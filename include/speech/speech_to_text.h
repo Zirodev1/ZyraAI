@@ -5,7 +5,7 @@
 
 #include <string>
 #include "audio/audio_processing.h"
-#include "../stt_model.h"
+#include "stt/stt_model.h"
 
 namespace zyraai {
     class SpeechToText {
@@ -15,8 +15,6 @@ namespace zyraai {
 
         std::string convertSpeechToText(const std::string& audioFilePath);
         void saveTextToFile(const std::string& text, const std::string& outputFilePath);
-
-        void convertTextToSpeech(const std::string& text, const std::string& outputAudioFilePath);
 
     private:
         STTModel model;

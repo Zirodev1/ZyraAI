@@ -1,24 +1,55 @@
 // src/main.cpp
 
-#include <iostream>
+#include "model/relu_layer.h"
 #include "model/zyraAI_model.h"
-#include "personalization/personality_manager.h"
+#include <Eigen/Dense>
+#include <iostream>
+#include <memory>
 
 int main() {
-    std::cout << "ZyraAI Starting..." << std::endl;
-    zyraai::ZyraAIModel model;
-    model.train();
-    model.predict();
+  std::cout << "ZyraAI Starting..." << std::endl;
 
-    zyraai::PersonalityManager personalityManager;
-    personalityManager.addPersonality("normal", "normal_behavior_script");
-    personalityManager.addPersonality("anime_waifu", "anime_waifu_behavior_script");
+  // Create a simple neural network
+  zyraai::ZyraAIModel model;
+  model.addLayer(std::make_shared<zyraai::ReLULayer>("hidden1", 2, 4));
+  model.addLayer(std::make_shared<zyraai::ReLULayer>("output", 4, 1));
 
-    personalityManager.setActivePersonality("normal");
-    std::cout << personalityManager.getResponse("Hello!") << std::endl;
+  // Create XOR training data
+  Eigen::MatrixXf input(2, 4);  // 4 samples, 2 features each
+  Eigen::MatrixXf target(1, 4); // 4 samples, 1 output each
 
-    personalityManager.setActivePersonality("anime_waifu");
-    std::cout << personalityManager.getResponse("Hello Senpai!") << std::endl;
+  // XOR truth table
+  input << 0, 0, 1, 1,  // First feature
+      0, 1, 0, 1;       // Second feature
+  target << 0, 1, 1, 0; // XOR output
 
-    return 0;
+  std::cout << "Training data:" << std::endl;
+  std::cout << "Input:\n" << input << std::endl;
+  std::cout << "Target:\n" << target << std::endl;
+
+  // Training loop
+  const int epochs = 10000;
+  const float learningRate = 0.01f;
+
+  std::cout << "\nTraining for " << epochs << " epochs..." << std::endl;
+  for (int epoch = 0; epoch < epochs; ++epoch) {
+    model.train(input, target, learningRate);
+
+    if (epoch % 1000 == 0) {
+      std::cout << "Epoch " << epoch << std::endl;
+    }
+  }
+
+  // Test the model
+  std::cout << "\nTesting the model:" << std::endl;
+  Eigen::MatrixXf output = model.forward(input);
+  std::cout << "Predicted output:\n" << output << std::endl;
+  std::cout << "Expected output:\n" << target << std::endl;
+
+  // Calculate accuracy
+  float accuracy =
+      (output.array().round() == target.array()).cast<float>().mean();
+  std::cout << "\nAccuracy: " << (accuracy * 100) << "%" << std::endl;
+
+  return 0;
 }

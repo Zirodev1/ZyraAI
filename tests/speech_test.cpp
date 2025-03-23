@@ -1,13 +1,31 @@
 #include "speech/speech_to_text.h"
-#include "text_to_speech.h"
+#include "tts/text_to_speech.h"
+#include "stt/stt_model.h"
+#include "audio/audio_processing.h"
 #include <cassert>
 #include <iostream>
 #include <fstream>
 
 void test_speech_to_text() {
     zyraai::SpeechToText speechToText;
-    std::string audioFilePath = "/media/ziro/ZiroHCKR/ZyraAI/tests/84-121123-0001.wav";  // Use absolute path
-    auto text = speechToText.convertSpeechToText(audioFilePath);
+    std::string audioFilePath = "/media/ziro/ZiroHCKR/ZyraAI/tests/84-121123-0001.wav";
+    auto features = zyraai::AudioProcessing::extractMFCC(audioFilePath);
+
+    zyraai::STTModel model;
+
+    // Create synthetic training data and labels for demonstration purposes
+    std::vector<std::vector<std::vector<float>>> trainingData;
+    std::vector<std::string> labels;
+
+    for (int i = 0; i < 10; ++i) {
+        std::vector<std::vector<float>> syntheticFeatures = features;
+        trainingData.push_back(syntheticFeatures);
+        labels.push_back("This is a synthetic transcription " + std::to_string(i));
+    }
+
+    model.train(trainingData, labels);
+
+    auto text = model.predict(features);
     assert(!text.empty());
 
     std::string outputTextFilePath = "output_text.txt";
