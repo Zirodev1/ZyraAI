@@ -9,6 +9,9 @@
 CTestTestfile.cmake
 CMakeLists.txt.user
 
+data/
+cmake/
+
 # Ignore executables and libraries
 *.exe
 *.out
