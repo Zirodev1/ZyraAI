@@ -64,8 +64,17 @@ public:
   }
 
   std::vector<Eigen::MatrixXf> getGradients() const override {
-    return {}; // Softmax has no gradients
+    return {}; // Softmax has no parameters
   }
+
+  void setTraining(bool training) override { isTraining_ = training; }
+
+  void updateParameter(size_t index, const Eigen::MatrixXf &update) override {
+    // No parameters to update
+  }
+
+  int getInputSize() const { return inputSize_; }
+  int getOutputSize() const { return inputSize_; }
 
 private:
   Eigen::MatrixXf lastInput_;

@@ -52,11 +52,18 @@ public:
 
   // Get layer gradients (dropout has no gradients)
   std::vector<Eigen::MatrixXf> getGradients() const override {
-    return std::vector<Eigen::MatrixXf>();
+    return {}; // Dropout has no parameters
   }
 
   // Set training mode
-  void setTraining(bool training) { isTraining_ = training; }
+  void setTraining(bool training) override { isTraining_ = training; }
+
+  void updateParameter(size_t index, const Eigen::MatrixXf &update) override {
+    // No parameters to update
+  }
+
+  int getInputSize() const { return inputSize_; }
+  int getOutputSize() const { return inputSize_; }
 
 private:
   float dropoutRate_;    // Probability of dropping a neuron

@@ -7,7 +7,7 @@ namespace zyraai {
 
 class ReLULayer : public Layer {
 public:
-  ReLULayer(const std::string &name, int inputSize, int outputSize)
+  ReLULayer(const ::std::string &name, int inputSize, int outputSize)
       : Layer(name, inputSize, outputSize) {}
 
   // Forward pass
@@ -23,13 +23,22 @@ public:
   }
 
   // Get layer parameters
-  std::vector<Eigen::MatrixXf> getParameters() const override {
+  ::std::vector<Eigen::MatrixXf> getParameters() const override {
     return {}; // ReLU has no parameters
   }
 
-  std::vector<Eigen::MatrixXf> getGradients() const override {
-    return {}; // ReLU has no gradients
+  ::std::vector<Eigen::MatrixXf> getGradients() const override {
+    return {}; // ReLU has no parameters
   }
+
+  void setTraining(bool training) override { isTraining_ = training; }
+
+  void updateParameter(size_t index, const Eigen::MatrixXf &update) override {
+    // No parameters to update
+  }
+
+  int getInputSize() const { return inputSize_; }
+  int getOutputSize() const { return outputSize_; }
 
 private:
   Eigen::MatrixXf lastInput_;

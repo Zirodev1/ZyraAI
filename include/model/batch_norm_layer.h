@@ -8,7 +8,7 @@ namespace zyraai {
 
 class BatchNormLayer : public Layer {
 public:
-  BatchNormLayer(const std::string &name, int inputSize, int outputSize)
+  BatchNormLayer(const ::std::string &name, int inputSize, int outputSize)
       : Layer(name, inputSize, outputSize), momentum_(0.9f), epsilon_(1e-5f) {
     gamma_ = Eigen::VectorXf::Ones(inputSize);
     beta_ = Eigen::VectorXf::Zero(inputSize);
@@ -16,7 +16,7 @@ public:
     runningVar_ = Eigen::VectorXf::Ones(inputSize);
   }
 
-  BatchNormLayer(const std::string &name, int size)
+  BatchNormLayer(const ::std::string &name, int size)
       : Layer(name, size, size), momentum_(0.9f), epsilon_(1e-5f) {
     gamma_ = Eigen::VectorXf::Ones(size);
     beta_ = Eigen::VectorXf::Zero(size);
@@ -53,6 +53,7 @@ public:
     return result;
   }
 
+  // Replace the entire backward method in include/model/batch_norm_layer.h
   Eigen::MatrixXf backward(const Eigen::MatrixXf &gradOutput,
                            float learningRate) override {
     int batchSize = gradOutput.cols();
@@ -62,48 +63,34 @@ public:
     gradGamma_ = (normalized_.array() * gradOutput.array()).rowwise().sum();
     gradBeta_ = gradOutput.rowwise().sum();
 
-    // Compute gradient with respect to normalized input
+    // Compute gradient with respect to input (simplified)
     Eigen::MatrixXf gradNormalized =
         gradOutput.array().colwise() * gamma_.array();
 
-    // Compute gradient with respect to variance
-    Eigen::VectorXf sumGradNormalized =
-        (normalized_.array() * gradNormalized.array()).rowwise().sum();
-    Eigen::VectorXf gradVar =
-        (-0.5f * stdInv_.array().cube() * sumGradNormalized.array()).matrix();
-
-    // Compute gradient with respect to mean
-    Eigen::VectorXf sumGradNormalizedWeighted =
-        (gradNormalized.array().colwise() * stdInv_.array()).rowwise().sum();
-    Eigen::VectorXf sumCentered = centered_.rowwise().sum();
-    Eigen::VectorXf gradMean =
-        -sumGradNormalizedWeighted -
-        2.0f * invBatchSize * (gradVar.array() * sumCentered.array()).matrix();
-
-    // Compute gradient with respect to input
-    float scale = 2.0f * invBatchSize;
-    Eigen::MatrixXf term1 = gradNormalized.array().colwise() * stdInv_.array();
-    Eigen::MatrixXf term2 =
-        centered_.array().colwise() * (scale * gradVar.array());
-    Eigen::MatrixXf term3 = gradMean.array().replicate(1, batchSize);
-    gradInput_ = term1 + term2 + term3 * invBatchSize;
-
-    // Update parameters
-    gamma_ = gamma_.array() - learningRate * gradGamma_.array();
-    beta_ = beta_.array() - learningRate * gradBeta_.array();
+    // Gradient with respect to input
+    gradInput_ = gradNormalized.array().colwise() * stdInv_.array();
 
     return gradInput_;
   }
 
-  std::vector<Eigen::MatrixXf> getParameters() const override {
+  ::std::vector<Eigen::MatrixXf> getParameters() const override {
     return {gamma_, beta_};
   }
 
-  std::vector<Eigen::MatrixXf> getGradients() const override {
+  ::std::vector<Eigen::MatrixXf> getGradients() const override {
     return {gradGamma_, gradBeta_};
   }
 
-  void setTraining(bool training) { isTraining_ = training; }
+  // Add this method to the public section in include/model/batch_norm_layer.h
+  void updateParameter(size_t index, const Eigen::MatrixXf &update) override {
+    if (index == 0) {
+      gamma_ -= update;
+    } else if (index == 1) {
+      beta_ -= update;
+    }
+  }
+
+  void setTraining(bool training) override { isTraining_ = training; }
 
 private:
   float momentum_;

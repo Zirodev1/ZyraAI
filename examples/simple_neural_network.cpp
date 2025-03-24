@@ -1,21 +1,40 @@
+#include "model/adam_optimizer.h"
+#include "model/dense_layer.h"
 #include "model/relu_layer.h"
 #include "model/zyraAI_model.h"
 #include <Eigen/Dense>
+#include <ctime>
 #include <iostream>
 #include <memory>
+#include <random>
 
 using namespace zyraai;
+using namespace ::std;
 
 int main() {
-  std::cout << "Creating a simple neural network for XOR problem..."
-            << std::endl;
+  cout << "Creating a simple neural network for XOR problem..." << ::std::endl;
 
-  // Create the model
-  ZyraAIModel model;
+  // Use a fixed seed for reproducibility
+  srand(42);
 
-  // Add layers (2 input neurons, 4 hidden neurons, 1 output neuron)
-  model.addLayer(std::make_shared<ReLULayer>("hidden1", 2, 4));
-  model.addLayer(std::make_shared<ReLULayer>("output", 4, 1));
+  // Create multiple models and train them with different initializations
+  const int numModels = 5;
+  vector<ZyraAIModel> models(numModels);
+  vector<AdamOptimizer> optimizers;
+
+  // Set up the models
+  for (int i = 0; i < numModels; i++) {
+    // Relatively large network for this simple problem
+    models[i].addLayer(::std::make_shared<DenseLayer>("dense1", 2, 16, true));
+    models[i].addLayer(::std::make_shared<ReLULayer>("relu1", 16, 16));
+    models[i].addLayer(::std::make_shared<DenseLayer>("dense2", 16, 8, true));
+    models[i].addLayer(::std::make_shared<ReLULayer>("relu2", 8, 8));
+    models[i].addLayer(::std::make_shared<DenseLayer>("dense3", 8, 1, true));
+
+    // Create an optimizer with a slightly different learning rate for each
+    // model
+    optimizers.emplace_back(models[i], 0.01f + 0.002f * i);
+  }
 
   // Create XOR training data
   Eigen::MatrixXf input(2, 4);  // 4 samples, 2 features each
@@ -26,33 +45,71 @@ int main() {
       0, 1, 0, 1;       // Second feature
   target << 0, 1, 1, 0; // XOR output
 
-  std::cout << "Training data:" << std::endl;
-  std::cout << "Input:\n" << input << std::endl;
-  std::cout << "Target:\n" << target << std::endl;
+  cout << "Training data:" << ::std::endl;
+  cout << "Input:\n" << input << ::std::endl;
+  cout << "Target:\n" << target << ::std::endl;
 
   // Training loop
-  const int epochs = 10000;
-  const float learningRate = 0.01f;
+  const int epochs = 20000;
 
-  std::cout << "\nTraining for " << epochs << " epochs..." << std::endl;
+  cout << "\nTraining " << numModels << " models for " << epochs
+       << " epochs each..." << ::std::endl;
+
+  // Keep track of best model
+  int bestModelIdx = 0;
+  float bestAccuracy = 0.0f;
+
   for (int epoch = 0; epoch < epochs; ++epoch) {
-    model.train(input, target, learningRate);
+    for (int modelIdx = 0; modelIdx < numModels; modelIdx++) {
+      // Forward pass
+      Eigen::MatrixXf output = models[modelIdx].forward(input);
+
+      // Compute gradients
+      Eigen::MatrixXf gradOutput = output - target;
+
+      // Backward pass
+      models[modelIdx].backward(gradOutput,
+                                0.0f); // Learning rate is handled by Adam
+
+      // Update parameters
+      optimizers[modelIdx].step();
+    }
 
     if (epoch % 1000 == 0) {
-      std::cout << "Epoch " << epoch << std::endl;
+      cout << "Epoch " << epoch << ::std::endl;
+
+      // Check which model is performing best
+      for (int modelIdx = 0; modelIdx < numModels; modelIdx++) {
+        Eigen::MatrixXf output = models[modelIdx].forward(input);
+        float accuracy =
+            (output.array().round() == target.array()).cast<float>().mean();
+
+        if (accuracy > bestAccuracy) {
+          bestAccuracy = accuracy;
+          bestModelIdx = modelIdx;
+
+          if (bestAccuracy == 1.0f) {
+            cout << "Found perfect solution with model " << bestModelIdx
+                 << " at epoch " << epoch << ::std::endl;
+          }
+        }
+      }
     }
   }
 
-  // Test the model
-  std::cout << "\nTesting the model:" << std::endl;
-  Eigen::MatrixXf output = model.forward(input);
-  std::cout << "Predicted output:\n" << output << std::endl;
-  std::cout << "Expected output:\n" << target << std::endl;
+  // Test the best model
+  cout << "\nTesting the best model (model " << bestModelIdx
+       << "):" << ::std::endl;
+  Eigen::MatrixXf output = models[bestModelIdx].forward(input);
+  cout << "Predicted output (raw):\n" << output << ::std::endl;
+  cout << "Predicted output (rounded):\n"
+       << output.array().round() << ::std::endl;
+  cout << "Expected output:\n" << target << ::std::endl;
 
   // Calculate accuracy
   float accuracy =
       (output.array().round() == target.array()).cast<float>().mean();
-  std::cout << "\nAccuracy: " << (accuracy * 100) << "%" << std::endl;
+  cout << "\nAccuracy: " << (accuracy * 100) << "%" << ::std::endl;
 
   return 0;
 }

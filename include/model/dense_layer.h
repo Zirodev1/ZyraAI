@@ -9,7 +9,7 @@ namespace zyraai {
 
 class DenseLayer : public Layer {
 public:
-  DenseLayer(const std::string &name, int inputSize, int outputSize,
+  DenseLayer(const ::std::string &name, int inputSize, int outputSize,
              bool useBias = true);
 
   // Forward pass
@@ -20,8 +20,8 @@ public:
                            float learningRate) override;
 
   // Get layer parameters
-  std::vector<Eigen::MatrixXf> getParameters() const override;
-  std::vector<Eigen::MatrixXf> getGradients() const override;
+  ::std::vector<Eigen::MatrixXf> getParameters() const override;
+  ::std::vector<Eigen::MatrixXf> getGradients() const override;
 
   // Activation function
   virtual Eigen::MatrixXf activation(const Eigen::MatrixXf &input) {
@@ -31,6 +31,19 @@ public:
   virtual Eigen::MatrixXf activationGradient(const Eigen::MatrixXf &input) {
     return (input.array() > 0.0f).cast<float>();
   }
+
+  void setTraining(bool training) override { isTraining_ = training; }
+
+  void updateParameter(size_t index, const Eigen::MatrixXf &update) override {
+    if (index == 0) {
+      weights_ -= update;
+    } else if (index == 1 && useBias_) {
+      bias_ -= update;
+    }
+  }
+
+  int getInputSize() const { return inputSize_; }
+  int getOutputSize() const { return outputSize_; }
 
 protected:
   Eigen::MatrixXf weights_;           // Weight matrix
