@@ -10,8 +10,7 @@ using namespace ::std;
 
 void test_speech_to_text() {
   zyraai::SpeechToText speechToText;
-  ::std::string audioFilePath =
-      "/media/ziro/ZiroHCKR/ZyraAI/tests/84-121123-0001.wav";
+  ::std::string audioFilePath = "../tests/84-121123-0001.wav";
   auto features = zyraai::AudioProcessing::extractMFCC(audioFilePath);
 
   zyraai::STTModel model;

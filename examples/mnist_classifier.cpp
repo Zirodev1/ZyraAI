@@ -136,14 +136,15 @@ int main() {
     const int numTrainSamples = 50000;
     std::cout << "Loading training data..." << std::endl;
     auto [trainImages, trainLabels] =
-        readMNIST("data/train-images-idx3-ubyte",
-                  "data/train-labels-idx1-ubyte", numTrainSamples);
+        readMNIST("I:/ZyraAI/data/train-images.idx3-ubyte",
+                  "I:/ZyraAI/data/train-labels.idx1-ubyte", numTrainSamples);
 
     // Load test data (using 10000 samples)
     const int numTestSamples = 10000;
     std::cout << "Loading test data..." << std::endl;
     auto [testImages, testLabels] =
-        readMNIST("data/t10k-images-idx3-ubyte", "data/t10k-labels-idx1-ubyte",
+        readMNIST("I:/ZyraAI/data/t10k-images.idx3-ubyte", 
+                  "I:/ZyraAI/data/t10k-labels.idx1-ubyte",
                   numTestSamples);
 
     // Create Adam optimizer
@@ -216,8 +217,7 @@ int main() {
             (output - batchLabels) / static_cast<float>(batchSize);
 
         // Backward pass
-        model.backward(gradOutput,
-                       0.0f); // Learning rate is handled by optimizer
+        model.backward(gradOutput, optimizer.getLearningRate());
 
         // Update parameters with Adam optimizer
         optimizer.step();

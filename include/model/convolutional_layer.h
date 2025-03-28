@@ -1,8 +1,16 @@
-#pragma once
+/**
+ * @file convolutional_layer.h
+ * @brief Convolutional layer implementation for neural networks
+ * @author ZyraAI Team
+ */
+
+#ifndef ZYRAAI_CONVOLUTIONAL_LAYER_H
+#define ZYRAAI_CONVOLUTIONAL_LAYER_H
 
 #include "layer.h"
 #include <Eigen/Dense>
 #include <random>
+#include <stdexcept>
 #include <vector>
 #ifdef _OPENMP
 #include <omp.h>
@@ -10,8 +18,28 @@
 
 namespace zyraai {
 
+/**
+ * @class ConvolutionalLayer
+ * @brief Implements a 2D convolutional layer for neural networks
+ * 
+ * A convolutional layer applies a set of learnable filters to the input
+ * by performing a convolution operation. Each filter produces an activation
+ * map that detects specific features in the input.
+ */
 class ConvolutionalLayer : public Layer {
 public:
+  /**
+   * @brief Construct a new Convolutional Layer
+   * @param name Layer name
+   * @param inputChannels Number of input channels
+   * @param inputHeight Height of the input feature map
+   * @param inputWidth Width of the input feature map
+   * @param numFilters Number of convolutional filters
+   * @param filterSize Size of each filter (square filters only)
+   * @param stride Stride of the convolution (default: 1)
+   * @param padding Zero-padding around the input (default: 0)
+   * @throws std::invalid_argument If any parameter is invalid
+   */
   ConvolutionalLayer(const ::std::string &name, int inputChannels,
                      int inputHeight, int inputWidth, int numFilters,
                      int filterSize, int stride = 1, int padding = 0)
@@ -23,9 +51,36 @@ public:
         inputWidth_(inputWidth), numFilters_(numFilters),
         filterSize_(filterSize), stride_(stride), padding_(padding) {
 
+    // Validate parameters
+    if (inputChannels <= 0) {
+      throw std::invalid_argument("ConvolutionalLayer: inputChannels must be positive");
+    }
+    if (inputHeight <= 0 || inputWidth <= 0) {
+      throw std::invalid_argument("ConvolutionalLayer: input dimensions must be positive");
+    }
+    if (numFilters <= 0) {
+      throw std::invalid_argument("ConvolutionalLayer: numFilters must be positive");
+    }
+    if (filterSize <= 0) {
+      throw std::invalid_argument("ConvolutionalLayer: filterSize must be positive");
+    }
+    if (stride <= 0) {
+      throw std::invalid_argument("ConvolutionalLayer: stride must be positive");
+    }
+    if (padding < 0) {
+      throw std::invalid_argument("ConvolutionalLayer: padding cannot be negative");
+    }
+
     // Calculate output dimensions
     outputHeight_ = (inputHeight_ - filterSize_ + 2 * padding_) / stride_ + 1;
     outputWidth_ = (inputWidth_ - filterSize_ + 2 * padding_) / stride_ + 1;
+    
+    // Check if output dimensions are valid
+    if (outputHeight_ <= 0 || outputWidth_ <= 0) {
+      throw std::invalid_argument(
+          "ConvolutionalLayer: output dimensions are invalid with current parameters. "
+          "Try increasing padding or decreasing stride.");
+    }
 
     // Initialize filters with Xavier/Glorot initialization
     float weight_scale =
@@ -57,8 +112,23 @@ public:
     gradBiases_ = Eigen::VectorXf::Zero(numFilters_);
   }
 
+  /**
+   * @brief Forward pass of convolution operation
+   * @param input Input tensor of shape [inputChannels*inputHeight*inputWidth, batchSize]
+   * @return Output tensor of shape [numFilters*outputHeight*outputWidth, batchSize]
+   * @throws std::invalid_argument If input dimensions don't match expected size
+   */
   Eigen::MatrixXf forward(const Eigen::MatrixXf &input) override {
     const int batchSize = input.cols();
+    
+    // Validate input dimensions
+    if (input.rows() != inputChannels_ * inputHeight_ * inputWidth_) {
+      throw std::invalid_argument(
+          "ConvolutionalLayer::forward: input dimension mismatch. Expected: " +
+          std::to_string(inputChannels_ * inputHeight_ * inputWidth_) + 
+          ", got: " + std::to_string(input.rows()));
+    }
+    
     input_ = input; // Store for backward pass
 
     // Initialize output
@@ -104,9 +174,28 @@ public:
     return output;
   }
 
+  /**
+   * @brief Backward pass of convolution operation
+   * @param gradOutput Gradient from the next layer
+   * @param learningRate Learning rate for parameter updates
+   * @return Gradient with respect to the input
+   * @throws std::invalid_argument If gradient dimensions don't match expected size
+   */
   Eigen::MatrixXf backward(const Eigen::MatrixXf &gradOutput,
                            float learningRate) override {
     const int batchSize = gradOutput.cols();
+    
+    // Validate gradient dimensions
+    if (gradOutput.rows() != numFilters_ * outputHeight_ * outputWidth_) {
+      throw std::invalid_argument(
+          "ConvolutionalLayer::backward: gradient dimension mismatch. Expected: " +
+          std::to_string(numFilters_ * outputHeight_ * outputWidth_) + 
+          ", got: " + std::to_string(gradOutput.rows()));
+    }
+    
+    if (learningRate <= 0.0f) {
+      throw std::invalid_argument("ConvolutionalLayer::backward: learningRate must be positive");
+    }
 
     // Initialize gradient of input
     Eigen::MatrixXf gradInput = Eigen::MatrixXf::Zero(
@@ -196,6 +285,10 @@ public:
     return gradInput;
   }
 
+  /**
+   * @brief Get the layer's parameters
+   * @return Vector containing filter weights and biases
+   */
   ::std::vector<Eigen::MatrixXf> getParameters() const override {
     ::std::vector<Eigen::MatrixXf> params;
     for (const auto &filter : filters_) {
@@ -205,6 +298,10 @@ public:
     return params;
   }
 
+  /**
+   * @brief Get the parameter gradients
+   * @return Vector containing filter gradients and bias gradients
+   */
   ::std::vector<Eigen::MatrixXf> getGradients() const override {
     ::std::vector<Eigen::MatrixXf> grads;
     for (const auto &gradFilter : gradFilters_) {
@@ -214,33 +311,47 @@ public:
     return grads;
   }
 
+  /**
+   * @brief Update a parameter with the given update
+   * @param index Parameter index (0 to numFilters-1: filters, numFilters: biases)
+   * @param update Update value to apply
+   * @throws std::out_of_range If index is invalid
+   */
   void updateParameter(size_t index, const Eigen::MatrixXf &update) override {
     if (index < numFilters_) {
       filters_[index] -= update;
     } else if (index == numFilters_) {
       biases_ -= update;
+    } else {
+      throw std::out_of_range("ConvolutionalLayer: parameter index out of range");
     }
   }
 
+  /**
+   * @brief Set the layer to training or evaluation mode
+   * @param training Whether the layer is in training mode
+   */
   void setTraining(bool training) override { isTraining_ = training; }
 
 private:
-  int inputChannels_;
-  int inputHeight_;
-  int inputWidth_;
-  int numFilters_;
-  int filterSize_;
-  int stride_;
-  int padding_;
-  int outputHeight_;
-  int outputWidth_;
+  int inputChannels_;    ///< Number of input channels
+  int inputHeight_;      ///< Height of input feature map
+  int inputWidth_;       ///< Width of input feature map
+  int numFilters_;       ///< Number of convolutional filters
+  int filterSize_;       ///< Size of each filter (square)
+  int stride_;           ///< Convolution stride
+  int padding_;          ///< Zero-padding around input
+  int outputHeight_;     ///< Height of output feature map
+  int outputWidth_;      ///< Width of output feature map
 
-  ::std::vector<Eigen::MatrixXf> filters_;
-  Eigen::VectorXf biases_;
-  ::std::vector<Eigen::MatrixXf> gradFilters_;
-  Eigen::VectorXf gradBiases_;
-  Eigen::MatrixXf input_; // Stored for backward pass
-  bool isTraining_ = true;
+  ::std::vector<Eigen::MatrixXf> filters_;      ///< Convolutional filters
+  Eigen::VectorXf biases_;                      ///< Bias terms
+  ::std::vector<Eigen::MatrixXf> gradFilters_;  ///< Filter gradients
+  Eigen::VectorXf gradBiases_;                  ///< Bias gradients
+  Eigen::MatrixXf input_;                       ///< Stored for backward pass
+  bool isTraining_;                             ///< Whether in training mode
 };
 
 } // namespace zyraai
+
+#endif // ZYRAAI_CONVOLUTIONAL_LAYER_H

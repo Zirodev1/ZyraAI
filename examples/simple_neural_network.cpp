@@ -68,8 +68,7 @@ int main() {
       Eigen::MatrixXf gradOutput = output - target;
 
       // Backward pass
-      models[modelIdx].backward(gradOutput,
-                                0.0f); // Learning rate is handled by Adam
+      models[modelIdx].backward(gradOutput, 0.0001f); // Small positive learning rate for backward pass
 
       // Update parameters
       optimizers[modelIdx].step();

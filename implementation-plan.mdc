@@ -1,6 +1,72 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+---
+description: 
+globs: 
+alwaysApply: false
+---
 # ZyraAI Implementation Plan
 
-## Phase 1: Model Architecture Enhancements (1-2 weeks)
+## Phase 1: Code Standardization and Cleanup (1 week)
+
+1. **Standardize Header Files** 
+   - Adopt consistent .h extension for all header files
+   - Ensure consistent include guard/pragma once usage
+   - Apply consistent formatting across codebase
+   Status: In Progress (70% Complete)
+   - Created standardized header template (header_template.h)
+   - Updated layer.h with documentation and error handling
+   - Updated batch_norm_layer.h with documentation and error handling
+   - Updated adam_optimizer.h with documentation and error handling
+   - Updated dense_layer.h with documentation and error handling
+   - Updated convolutional_layer.h with documentation and error handling
+   - Updated relu_layer.h with documentation and error handling
+   - Updated softmax_layer.h with documentation and error handling
+   
+2. **Improve Error Handling**
+   - Implement thorough input validation across all components
+   - Create a standardized error handling system
+   - Add parameter boundary checks to all layer constructors
+   Status: In Progress (80% Complete)
+   - Added parameter validation to Layer constructor
+   - Added parameter validation to BatchNormLayer constructors
+   - Added parameter validation to AdamOptimizer constructor and methods
+   - Added parameter validation to DenseLayer constructor and methods
+   - Added parameter validation to ConvolutionalLayer constructor and methods
+   - Added parameter validation to ReLULayer constructor and methods
+   - Added parameter validation to SoftmaxLayer constructor and methods
+   - Created standardized error_handler.h with custom exception types
+   - Implemented consistent error message formatting
+   - Created unit tests for error handling system (error_handler_test.cpp)
+   - Integrated error handler with ReLULayer as a demonstration
+
+3. **Enhance Documentation**
+   - Add Doxygen-style comments to public APIs
+   - Document mathematical foundations of algorithms
+   - Improve inline comments for complex operations
+   Status: In Progress (75% Complete)
+   - Added detailed Doxygen-compatible comments to Layer, BatchNormLayer, and AdamOptimizer
+   - Added detailed Doxygen-compatible comments to DenseLayer
+   - Added detailed Doxygen-compatible comments to ConvolutionalLayer
+   - Added detailed Doxygen-compatible comments to ReLULayer
+   - Added detailed Doxygen-compatible comments to SoftmaxLayer
+   - Created documentation for class members and methods
+   - Added parameter and return value documentation
+   - Added implementation-specific documentation comments to dense_layer.cpp
+   - Added mathematical explanations for complex operations (e.g., softmax)
+
+4. **Next Steps for Phase 1 Completion**
+   - Integrate error_handler.h with remaining layer implementations
+   - Update remaining layer types (MaxPoolingLayer, FlattenLayer, etc.)
+   - Create standardized unit test templates for layers
+   - Implement unit tests to verify error handling functionality in layers
+   - Update CMakeLists.txt to ensure all new files are included
+   - Create comprehensive error handling guidelines for future development
+
+## Phase 2: Model Architecture Enhancements (1-2 weeks)
 
 1. **Add a Third Convolutional Layer** 
    - Implement a deeper architecture with a third convolutional block
@@ -20,7 +86,7 @@
    - Utilized both ResidualBlock and SimpleResidualBlock implementations
    - Implemented different channel configurations (16->32->64) with skip connections
 
-## Phase 2: Hardware Acceleration (2-3 weeks)
+## Phase 3: Hardware Acceleration (2-3 weeks)
 
 3. **Metal Performance Shaders Integration**
    - Create Metal framework integration for Apple Silicon
@@ -37,7 +103,7 @@
    - Reduce memory footprint through in-place operations
    Status: Not Started
 
-## Phase 3: Training Enhancement & Portability (1-2 weeks)
+## Phase 4: Training Enhancement & Portability (1-2 weeks)
 
 5. **Advanced Training Techniques**
    - Implement learning rate warmup & scheduling
@@ -51,7 +117,7 @@
    - Implement ONNX export for portability
    Status: Not Started
 
-## Phase 4: Dataset Expansion (2 weeks)
+## Phase 5: Dataset Expansion (2 weeks)
 
 7. **Support for Complex Datasets**
    - Add CIFAR-10/100 dataset support

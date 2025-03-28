@@ -3,6 +3,25 @@ cmake_minimum_required(VERSION 3.10)
 # Set the project name and version
 project(ZyraAI VERSION 1.0)
 
+# Platform-specific configurations
+if(WIN32)
+    # Add MSYS2 paths
+    list(APPEND CMAKE_PREFIX_PATH "C:/msys64/mingw64/lib/cmake")
+    list(APPEND CMAKE_PREFIX_PATH "C:/msys64/mingw64/lib/cmake/Eigen3")
+    list(APPEND CMAKE_PREFIX_PATH "C:/msys64/mingw64/lib/cmake/GTest")
+    list(APPEND CMAKE_PREFIX_PATH "C:/msys64/mingw64/lib/cmake/SndFile")
+    
+    # Add MinGW paths
+    list(APPEND CMAKE_PREFIX_PATH "C:/MinGW/lib/cmake")
+    
+    # MinGW GCC compiler flags
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-unused-parameter -Wno-sign-compare")
+    set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
+else()
+    # Enable maximum vectorization for non-Windows platforms
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvectorize -funroll-loops")
+endif()
+
 # Check for Apple Silicon
 if(APPLE)
   execute_process(COMMAND uname -m OUTPUT_VARIABLE ARCH OUTPUT_STRIP_TRAILING_WHITESPACE)
@@ -30,14 +49,10 @@ if(APPLE_SILICON)
   set(CMAKE_CXX_FLAGS_RELEASE "-O3 -mcpu=apple-m1 -mtune=apple-m1 -DNDEBUG -ffast-math -fvectorize -fslp-vectorize -ffp-contract=fast")
   set(CMAKE_OBJCXX_FLAGS_RELEASE ${CMAKE_CXX_FLAGS_RELEASE})
 else()
-  # General optimizations for other platforms
-  set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -DNDEBUG -ffast-math")
-endif()
-
-# Enable maximum vectorization
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvectorize -funroll-loops")
-if(APPLE_SILICON)
-  set(CMAKE_OBJCXX_FLAGS "${CMAKE_OBJCXX_FLAGS} -fvectorize -funroll-loops")
+  if(NOT WIN32)
+    # General optimizations for non-Windows platforms
+    set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -DNDEBUG -ffast-math")
+  endif()
 endif()
 
 # Set build type to Release for optimizations
@@ -50,26 +65,58 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 # Add the module path for custom CMake modules
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 
-# Find required packages
-find_package(Eigen3 REQUIRED)
-find_package(SndFile REQUIRED)
-find_package(OpenMP QUIET)
-find_package(GTest REQUIRED)
+# Find required packages with platform-specific handling
+if(WIN32)
+    # Windows: Make packages optional
+    find_package(Eigen3 QUIET)
+    if(NOT Eigen3_FOUND)
+        message(WARNING "Eigen3 not found. Some features will be disabled.")
+        set(EIGEN3_INCLUDE_DIR "")
+    endif()
 
-if(OpenMP_CXX_FOUND)
-  message(STATUS "OpenMP found and enabled")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+    find_package(SndFile QUIET)
+    if(NOT SNDFILE_FOUND)
+        message(WARNING "SndFile not found. Audio processing features will be disabled.")
+        set(SNDFILE_INCLUDE_DIRS "")
+    endif()
+
+    find_package(OpenMP QUIET)
+    if(OpenMP_CXX_FOUND)
+        message(STATUS "OpenMP found and enabled")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+    else()
+        message(STATUS "OpenMP not found. Multi-threading capabilities will be limited.")
+    endif()
+
+    find_package(GTest QUIET)
+    if(NOT GTEST_FOUND)
+        message(WARNING "GTest not found. Tests will be disabled.")
+        set(GTEST_INCLUDE_DIRS "")
+    endif()
 else()
-  message(STATUS "OpenMP not found. Multi-threading capabilities will be limited.")
+    # macOS: Keep required packages
+    find_package(Eigen3 REQUIRED)
+    find_package(SndFile REQUIRED)
+    find_package(OpenMP QUIET)
+    find_package(GTest REQUIRED)
 endif()
 
 # Include directories
 include_directories(
     ${CMAKE_SOURCE_DIR}/include
-    ${EIGEN3_INCLUDE_DIR}
-    ${SNDFILE_INCLUDE_DIRS}
-    ${GTEST_INCLUDE_DIRS}
 )
+
+if(EIGEN3_INCLUDE_DIR)
+    include_directories(${EIGEN3_INCLUDE_DIR})
+endif()
+
+if(SNDFILE_INCLUDE_DIRS)
+    include_directories(${SNDFILE_INCLUDE_DIRS})
+endif()
+
+if(GTEST_INCLUDE_DIRS)
+    include_directories(${GTEST_INCLUDE_DIRS})
+endif()
 
 # Add Metal source files
 if(APPLE_SILICON)
@@ -288,6 +335,25 @@ if(APPLE_SILICON)
     target_link_libraries(mnist_residual_network ZyraAI_metal)
 endif()
 
+# Add the CIFAR-10 classifier executable
+add_executable(cifar10_classifier examples/cifar10_classifier.cpp ${SOURCES})
+if(OpenMP_CXX_FOUND)
+    target_link_libraries(cifar10_classifier
+        Eigen3::Eigen
+        ${SNDFILE_LIBRARIES}
+        OpenMP::OpenMP_CXX
+    )
+else()
+    target_link_libraries(cifar10_classifier
+        Eigen3::Eigen
+        ${SNDFILE_LIBRARIES}
+    )
+endif()
+
+if(APPLE_SILICON)
+    target_link_libraries(cifar10_classifier ZyraAI_metal)
+endif()
+
 # Enable testing
 enable_testing()
 
@@ -311,23 +377,36 @@ if(APPLE_SILICON)
 endif()
 
 # Create test executables
-foreach(test_name data_tests model_tests speech_test metal_test)
+if(WIN32)
+    set(TEST_NAMES data_tests model_tests speech_test error_handler_test)
+else()
+    set(TEST_NAMES data_tests model_tests speech_test metal_test error_handler_test)
+endif()
+
+foreach(test_name ${TEST_NAMES})
     add_executable(${test_name}_test tests/${test_name}.cpp)
     target_link_libraries(${test_name}_test PRIVATE GTest::gtest_main)
     
-    if(${test_name} STREQUAL "metal_test")
+    if(${test_name} STREQUAL "metal_test" AND APPLE_SILICON)
         target_link_libraries(${test_name}_test PRIVATE ZyraAI_metal ${METAL_LIBRARY} ${FOUNDATION_LIBRARY})
-        if(APPLE_SILICON)
-            set_target_properties(${test_name}_test PROPERTIES
-                LINKER_LANGUAGE OBJCXX
-            )
-            set_source_files_properties(tests/metal_test.cpp PROPERTIES
-                COMPILE_FLAGS "-x objective-c++"
-            )
-        endif()
+        set_target_properties(${test_name}_test PROPERTIES
+            LINKER_LANGUAGE OBJCXX
+        )
+        set_source_files_properties(tests/metal_test.cpp PROPERTIES
+            COMPILE_FLAGS "-x objective-c++"
+        )
     else()
         target_link_libraries(${test_name}_test PRIVATE ZyraAI_lib)
     endif()
     
     add_test(NAME ${test_name} COMMAND ${test_name}_test)
 endforeach()
+
+# Set compiler flags
+if(MSVC)
+    # Visual Studio specific flags
+    add_compile_options(/W4)
+else()
+    # GCC/Clang flags
+    add_compile_options(-Wall -Wextra -Wpedantic)
+endif()
