@@ -12,9 +12,13 @@
 #include <filesystem>
 #include <Eigen/Dense>
 
-#include "model/adam_optimizer.h"
 #include "model/batch_norm_layer.h"
+#include "model/channel_batch_norm_layer.h"
+#include "model/convolutional_layer.h"
 #include "model/dense_layer.h"
+#include "model/dropout_layer.h"
+#include "model/improved_conv_layer.h"
+#include "model/adam_optimizer.h"
 #include "model/dropout_layer.h"
 #include "model/relu_layer.h"
 #include "model/softmax_layer.h"
@@ -219,28 +223,47 @@ int main() {
     const int epochs = 100;
     const float initialLearningRate = 0.001f;
     
-    // Build an efficient model for CIFAR-10
+    // Build an improved CNN model for CIFAR-10
     ZyraAIModel model;
     
-    // Input size
-    const int inputSize = inputChannels * inputHeight * inputWidth;
+    // Input dimensions
+    const std::vector<int> inputShape = {inputChannels, inputHeight, inputWidth};
+
+    // Convolutional layers
+    model.addLayer(std::make_shared<ImprovedConvLayer>("conv1", inputShape, 32, 3, 1, 1));
+    model.addLayer(std::make_shared<ChannelBatchNormLayer>("bn1", {32, 32, 32}));
+    model.addLayer(std::make_shared<ReLULayer>("relu1", {32, 32, 32}, {32, 32, 32}));
+
+    model.addLayer(std::make_shared<ImprovedConvLayer>("conv2", {32, 32, 32}, 32, 3, 1, 1));
+    model.addLayer(std::make_shared<ChannelBatchNormLayer>("bn2", {32, 32, 32}));
+    model.addLayer(std::make_shared<ReLULayer>("relu2", {32, 32, 32}, {32, 32, 32}));
     
-    // Layer 1: 128 neurons with batch normalization
-    model.addLayer(std::make_shared<DenseLayer>("dense1", inputSize, 512));
-    model.addLayer(std::make_shared<BatchNormLayer>("bn1", 512));
-    model.addLayer(std::make_shared<ReLULayer>("relu1", 512, 512));
-    model.addLayer(std::make_shared<DropoutLayer>("dropout1", 512, 0.3f));
-    
-    // Layer 2: 256 neurons with batch normalization
-    model.addLayer(std::make_shared<DenseLayer>("dense2", 512, 256));
-    model.addLayer(std::make_shared<BatchNormLayer>("bn2", 256));
-    model.addLayer(std::make_shared<ReLULayer>("relu2", 256, 256));
-    model.addLayer(std::make_shared<DropoutLayer>("dropout2", 256, 0.3f));
-    
-    // Output layer
-    model.addLayer(std::make_shared<DenseLayer>("dense3", 256, numClasses));
+    // Max Pooling 1
+    model.addLayer(std::make_shared<MaxPoolingLayer>("maxpool1", {32, 32, 32}, 2, 2));
+
+    model.addLayer(std::make_shared<ImprovedConvLayer>("conv3", {32, 16, 16}, 64, 3, 1, 1));
+    model.addLayer(std::make_shared<ChannelBatchNormLayer>("bn3", {64, 16, 16}));
+    model.addLayer(std::make_shared<ReLULayer>("relu3", {64, 16, 16}, {64, 16, 16}));
+
+    model.addLayer(std::make_shared<ImprovedConvLayer>("conv4", {64, 16, 16}, 64, 3, 1, 1));
+    model.addLayer(std::make_shared<ChannelBatchNormLayer>("bn4", {64, 16, 16}));
+    model.addLayer(std::make_shared<ReLULayer>("relu4", {64, 16, 16}, {64, 16, 16}));
+
+    // Max Pooling 2
+    model.addLayer(std::make_shared<MaxPoolingLayer>("maxpool2", {64, 16, 16}, 2, 2));
+
+    // Flatten layer
+    model.addLayer(std::make_shared<FlattenLayer>("flatten", {64, 8, 8}));
+
+    // Calculate input size for dense layers
+    const int denseInputSize = 64 * 8 * 8;
+
+    // Dense layers
+    model.addLayer(std::make_shared<DenseLayer>("dense1", denseInputSize, 512));
+    model.addLayer(std::make_shared<ReLULayer>("relu5", 512, 512));
+    model.addLayer(std::make_shared<DenseLayer>("dense2", 512, numClasses));
     model.addLayer(std::make_shared<SoftmaxLayer>("softmax", numClasses));
-    
+
     // Initialize Adam optimizer
     AdamOptimizer optimizer(model, initialLearningRate);
     
@@ -279,6 +302,13 @@ int main() {
         model.setTraining(true);
         
         // Process in mini-batches
+                // Reshape each image to 3x32x32
+        std::vector<Eigen::MatrixXf> reshapedTrainImages;
+        for (const auto& image : trainImages) {
+            Eigen::MatrixXf reshapedImage = image.reshaped(3, 32, 32);
+            reshapedTrainImages.push_back(reshapedImage);
+        }
+
         for (size_t b = 0; b < trainImages.size(); b += batchSize) {
             // Create mini-batch
             Eigen::MatrixXf batchInput = createMiniBatch(trainImages, indices, b, batchSize);
@@ -334,6 +364,13 @@ int main() {
         model.setTraining(false);
         
         // Process validation set in mini-batches
+        // Reshape each image to 3x32x32
+        std::vector<Eigen::MatrixXf> reshapedValidationImages;
+        for (const auto& image : validationImages) {
+            Eigen::MatrixXf reshapedImage = image.reshaped(3, 32, 32);
+            reshapedValidationImages.push_back(reshapedImage);
+        }
+
         for (size_t b = 0; b < validationImages.size(); b += batchSize) {
             std::vector<int> valIndices(validationSize);
             std::iota(valIndices.begin(), valIndices.end(), 0);
@@ -407,6 +444,13 @@ int main() {
     std::vector<std::vector<int>> confusionMatrix(numClasses, std::vector<int>(numClasses, 0));
     
     for (size_t b = 0; b < testImages.size(); b += batchSize) {
+                // Reshape each image to 3x32x32
+        std::vector<Eigen::MatrixXf> reshapedTestImages;
+        for (const auto& image : testImages) {
+            Eigen::MatrixXf reshapedImage = image.reshaped(3, 32, 32);
+            reshapedTestImages.push_back(reshapedImage);
+        }
+        
         std::vector<int> testIndices(testImages.size());
         std::iota(testIndices.begin(), testIndices.end(), 0);
         
