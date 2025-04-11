@@ -119,6 +119,14 @@ public:
   int getInputSize() const { return inputSize_; }
   int getOutputSize() const { return outputSize_; }
 
+  /**
+   * @brief Get the layer type
+   * @return Layer type as string
+   */
+  ::std::string getType() const override {
+    return "ReLULayer";
+  }
+
 private:
   Eigen::MatrixXf lastInput_;  ///< Cached input for computing gradients
 };

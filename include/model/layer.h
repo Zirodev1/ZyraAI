@@ -95,6 +95,12 @@ public:
    */
   virtual void updateParameter(size_t index, const Eigen::MatrixXf &update) = 0;
 
+  /**
+   * @brief Get the type of the layer
+   * @return String representing the layer type
+   */
+  virtual ::std::string getType() const = 0;
+
 protected:
   ::std::string name_;   ///< Layer name
   int inputSize_;        ///< Input size

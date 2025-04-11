@@ -106,7 +106,7 @@ public:
 
   /**
    * @brief Backward pass of batch normalization
-   * @param gradOutput Gradient from the next layer
+   * @param gradOutput Gradient from next layer
    * @param learningRate Learning rate for parameter updates
    * @return Gradient with respect to the input
    */
@@ -171,6 +171,14 @@ public:
    * @param training Whether the layer is in training mode
    */
   void setTraining(bool training) override { isTraining_ = training; }
+
+  /**
+   * @brief Get the type of the layer
+   * @return String representing the layer type
+   */
+  ::std::string getType() const override {
+    return "BatchNormLayer";
+  }
 
 private:
   float momentum_;    ///< Momentum factor for running statistics

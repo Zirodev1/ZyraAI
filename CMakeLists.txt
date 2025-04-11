@@ -354,6 +354,44 @@ if(APPLE_SILICON)
     target_link_libraries(cifar10_classifier ZyraAI_metal)
 endif()
 
+# Add the improved CIFAR-10 classifier executable
+add_executable(cifar10_improved examples/cifar10_improved.cpp ${SOURCES})
+if(OpenMP_CXX_FOUND)
+    target_link_libraries(cifar10_improved
+        Eigen3::Eigen
+        ${SNDFILE_LIBRARIES}
+        OpenMP::OpenMP_CXX
+    )
+else()
+    target_link_libraries(cifar10_improved
+        Eigen3::Eigen
+        ${SNDFILE_LIBRARIES}
+    )
+endif()
+
+if(APPLE_SILICON)
+    target_link_libraries(cifar10_improved ZyraAI_metal)
+endif()
+
+# Add the CIFAR-10 CNN classifier executable
+add_executable(cifar10_cnn examples/cifar10_cnn.cpp ${SOURCES})
+if(OpenMP_CXX_FOUND)
+    target_link_libraries(cifar10_cnn
+        Eigen3::Eigen
+        ${SNDFILE_LIBRARIES}
+        OpenMP::OpenMP_CXX
+    )
+else()
+    target_link_libraries(cifar10_cnn
+        Eigen3::Eigen
+        ${SNDFILE_LIBRARIES}
+    )
+endif()
+
+if(APPLE_SILICON)
+    target_link_libraries(cifar10_cnn ZyraAI_metal)
+endif()
+
 # Enable testing
 enable_testing()
 
@@ -401,6 +439,22 @@ foreach(test_name ${TEST_NAMES})
     
     add_test(NAME ${test_name} COMMAND ${test_name}_test)
 endforeach()
+
+# Check for CUDA
+option(USE_CUDA "Enable CUDA support if available" OFF)
+if(USE_CUDA)
+    find_package(CUDA)
+    if(CUDA_FOUND)
+        message(STATUS "CUDA found. Enabling GPU acceleration.")
+        add_definitions(-DUSE_CUDA)
+        include_directories(${CUDA_INCLUDE_DIRS})
+        set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-O3;-arch=sm_50;--expt-relaxed-constexpr)
+        set(CUDA_PROPAGATE_HOST_FLAGS OFF)
+        list(APPEND LIBRARIES ${CUDA_LIBRARIES} ${CUDA_CUBLAS_LIBRARIES} ${CUDA_curand_LIBRARY})
+    else()
+        message(STATUS "CUDA not found. Using CPU only.")
+    endif()
+endif()
 
 # Set compiler flags
 if(MSVC)

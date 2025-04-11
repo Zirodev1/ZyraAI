@@ -219,6 +219,14 @@ public:
     isTraining_ = training;
   }
 
+  /**
+   * @brief Get the layer type
+   * @return Layer type as string
+   */
+  ::std::string getType() const override {
+    return "ResidualBlock";
+  }
+
 private:
   int inputChannels_;
   int inputHeight_;

@@ -38,6 +38,14 @@ public:
 
   void setTraining(bool training) override { isTraining_ = training; }
 
+  /**
+   * @brief Get the layer type
+   * @return Layer type as string
+   */
+  ::std::string getType() const override {
+    return "IdentityLayer";
+  }
+
 private:
   Eigen::MatrixXf input_; // Stored for backward pass
   bool isTraining_ = true;

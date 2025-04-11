@@ -152,6 +152,14 @@ public:
   int getInputSize() const { return inputSize_; }
   int getOutputSize() const { return inputSize_; }
 
+  /**
+   * @brief Get the layer type
+   * @return Layer type as string
+   */
+  std::string getType() const override {
+    return "SoftmaxLayer";
+  }
+
 private:
   Eigen::MatrixXf lastInput_;   ///< Cached input for backward pass
   Eigen::MatrixXf lastOutput_;  ///< Cached output for computing gradients

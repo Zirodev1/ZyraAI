@@ -180,6 +180,14 @@ public:
     isTraining_ = training;
   }
 
+  /**
+   * @brief Get the layer type
+   * @return Layer type as string
+   */
+  ::std::string getType() const override {
+    return "SimpleResidualBlock";
+  }
+
 private:
   int channels_;
   int height_;

@@ -65,6 +65,14 @@ public:
   int getInputSize() const { return inputSize_; }
   int getOutputSize() const { return inputSize_; }
 
+  /**
+   * @brief Get the layer type
+   * @return Layer type as string
+   */
+  ::std::string getType() const override {
+    return "DropoutLayer";
+  }
+
 private:
   float dropoutRate_;    // Probability of dropping a neuron
   Eigen::MatrixXf mask_; // Dropout mask

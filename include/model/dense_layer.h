@@ -66,6 +66,14 @@ public:
   ::std::vector<Eigen::MatrixXf> getGradients() const override;
 
   /**
+   * @brief Get the layer type
+   * @return Layer type as string
+   */
+  ::std::string getType() const override {
+    return "DenseLayer";
+  }
+
+  /**
    * @brief Apply activation function to the linear output
    * @param input Linear output tensor
    * @return Activated tensor
